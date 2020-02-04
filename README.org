@@ -1,9 +1,7 @@
 #+title: Deep Learning Lemmatizer on CoRoLa
 * Objective
   Find a *non-linear* transformation
-  #+begin_export latex
-  \begin{displaymath}
+
     f \colon D \to L
-  \end{displaymath}
-  #+end_export
+
   such that given a word /w/, /f/ will find its lemma.
