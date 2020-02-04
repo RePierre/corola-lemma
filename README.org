@@ -2,6 +2,8 @@
 * Objective
   Find a *non-linear* transformation
   #+begin_export latex
-  f \colon D \to L
+  \begin{displaymath}
+    f \colon D \to L
+  \end{displaymath}
   #+end_export
   such that given a word /w/, /f/ will find its lemma.
