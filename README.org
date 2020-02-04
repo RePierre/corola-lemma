@@ -2,6 +2,6 @@
 * Objective
   Find a *non-linear* transformation
 
-    f \colon D \to L
+    f : D \to L
 
   such that given a word /w/, /f/ will find its lemma.
