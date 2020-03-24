@@ -57,16 +57,11 @@ def run(args):
         'epochs': [args.num_epochs],
         'sample_dim': [ds.sample_size],
         'batch_size': [1, 16, 64],
-        'optimizer': ['adam', 'adagrad', 'nadam', 'adamax'],
+        'optimizer': ['adam'],
         'encoding_dim': [16, 32, 64, 128],
-        'encoder_activation':
-        ['sigmoid', 'elu', 'softmax', 'relu', 'tanh', 'linear'],
-        'decoder_activation':
-        ['sigmoid', 'elu', 'softmax', 'relu', 'tanh', 'linear'],
-        'loss': [
-            'mean_squared_error', 'cosine_proximity',
-            'kullback_leibler_divergence'
-        ]
+        'encoder_activation': ['relu'],
+        'decoder_activation': ['linear'],
+        'loss': ['cosine_proximity']
     }
 
     gs = GridSearchCV(estimator=model,
