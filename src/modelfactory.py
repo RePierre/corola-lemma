@@ -8,7 +8,7 @@ import os.path as path
 
 
 # Create base class in order to provide proper callbacks to the model
-def build_autoencoder(verbose=1):
+def build_autoencoder(verbose=0):
     """
     Builds and autoencoder model that can be used by scikit_learn API.
 
