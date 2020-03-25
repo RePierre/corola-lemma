@@ -1,6 +1,12 @@
 from zipfile import ZipFile
 import pandas as pd
 import numpy as np
+from collections import namedtuple
+import csv
+import logging
+
+DataSample = namedtuple('DataSample',
+                        ['word', 'word_embedding', 'lemma', 'lemma_embedding'])
 
 
 class WordEmebeddingsDataset:
@@ -26,18 +32,32 @@ class WordEmebeddingsDataset:
         self._word_lemma_pairs_file = word_lemma_pairs_file
 
     @property
+    def words(self):
+        """
+        Returns the list of words.
+        """
+        return [s.word for s in self._dataset]
+
+    @property
     def word_embeddings(self):
         """
         Returns the list of word embeddings.
         """
-        return [we for we in self._dataset['WordEmbedding']]
+        return [s.word_embedding for s in self._dataset]
+
+    @property
+    def lemmas(self):
+        """
+        Returns the list of lemmas.
+        """
+        return [s.lemma for s in self._dataset]
 
     @property
     def lemma_embeddings(self):
         """
         Returns the list of lemma embeddings.
         """
-        return [le for le in self._dataset['LemmaEmbedding']]
+        return [s.lemma_embedding for s in self._dataset]
 
     @property
     def sample_size(self):
@@ -65,35 +85,32 @@ class WordEmebeddingsDataset:
         """
         # Maybe start another process to free some memory
         # https://stackoverflow.com/questions/32167386/force-garbage-collection-in-python-to-free-memory
+        logging.info("Loading word-lemma pairs...")
+        pairs_dict = self._load_word_lemma_pairs()
+        logging.info("Loading word embeddings...")
+        we_dict = self._load_embeddings_dict(self._word_embeddings_file)
+        logging.info("Loading lemma embeddings...")
+        le_dict = self._load_embeddings_dict(self._lemma_embeddings_file)
+        logging.info("Determining sample size...")
+        self._determine_sample_size(we_dict, le_dict)
 
-        pairs_df = pd.read_csv(self._word_lemma_pairs_file, sep='\t', header=0)
-
-        we_df, we_size = self._load_embeddings_dataframe(
-            self._word_embeddings_file, ['Word', 'WordEmbedding'])
-        le_df, le_size = self._load_embeddings_dataframe(
-            self._lemma_embeddings_file, ['Lemma', 'LemmaEmbedding'])
-
-        if we_size == le_size:
-            self._sample_size = we_size
-        else:
-            raise AssertionError(
-                'Word embeddings size does not match lemma embeddings size.')
-
-        common_df1 = we_df.merge(pairs_df, left_on='Word', right_on='Word')
-        self._dataset = common_df1.merge(le_df,
-                                         left_on='Lemma',
-                                         right_on='Lemma')
-        if with_preview:
-            print('Word-lemma pairs:')
-            print(pairs_df.head())
-            print('Word vectors:')
-            print(we_df.head())
-            print('Lemma vectors:')
-            print(le_df.head())
-            print('First merge:')
-            print(common_df1.head())
-            print('Second merge:')
-            print(self._dataset.tail())
+        logging.info("Determining the common words...")
+        # Intersect word sets to get common words
+        common_words = pairs_dict.keys() & we_dict.keys()
+        logging.info("Building the dataset...")
+        self._dataset = []
+        for word in common_words:
+            word_embedding = we_dict[word]
+            lemma = pairs_dict[word]
+            if lemma not in le_dict:
+                continue
+            lemma_embedding = le_dict[lemma]
+            self._dataset.append(
+                DataSample(word=word,
+                           word_embedding=word_embedding,
+                           lemma=lemma,
+                           lemma_embedding=lemma_embedding))
+        logging.info("Done. Total samples: {}".format(len(self._dataset)))
 
     def save_word_lemma_pairs(self, file_path):
         """
@@ -104,16 +121,47 @@ class WordEmebeddingsDataset:
         file_path: string
             The path to the csv file where to save the word-lemma pairs.
         """
-        self._dataset.to_csv(file_path, columns=['Word', 'Lemma'])
+        with open(file_path, 'wt') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Word', 'Lemma'])
+            for s in self._dataset:
+                writer.writerow([s.word, s.lemma])
 
-    def _load_embeddings_dataframe(self, file_name, columns):
-        embeddings = self._load_embeddings(file_name)
-        embeddings = list(embeddings)
-        _, e = embeddings[0]
-        sample_size = e.shape[0]
+    def _determine_sample_size(self, word_embeddings, lemma_embeddings):
+        """
+        Determines the dimensionality of word and lemma embeddings.
 
-        df = pd.DataFrame.from_records(embeddings, columns)
-        return df, sample_size
+        Raises
+        ------
+        AssertionError
+            If the sample size of lemma embeddings is not the same as
+            the sample size of word embeddings.
+        """
+        we = next(iter(word_embeddings.values()))
+        le = next(iter(lemma_embeddings.values()))
+        we_dim = we.shape[0]
+        le_dim = le.shape[0]
+        if we_dim != le_dim:
+            raise AssertionError(
+                'Word embeddings size does not match lemma embeddings size.')
+
+        self._sample_size = we_dim
+
+    def _load_embeddings_dict(self, file_name):
+        """
+        Loads words and their embeddings from the specified file.
+
+        Parameters
+        ----------
+        file_name: string
+            The path to the file where word embeddings are stored.
+
+        Returns
+        -------
+        dict of <word, embedding>
+            The dictionary of words and their embeddings.
+        """
+        return {word: vec for word, vec in self._load_embeddings(file_name)}
 
     def _load_embeddings(self, zip_file_path):
         with ZipFile(zip_file_path) as input_file:
@@ -138,16 +186,28 @@ class WordEmebeddingsDataset:
         vec = np.array(parts[1:], np.float32)
         return word, vec
 
+    def _load_word_lemma_pairs(self):
+        """
+        Loads the word-lemma pairs as a dictionary.
+
+        Returns
+        -------
+        dict of <word, lemma>
+            The dictionary of word and their associated lemmas.
+        """
+        pairs_df = pd.read_csv(self._word_lemma_pairs_file, sep='\t', header=0)
+        return {row['Word']: row['Lemma'] for _, row in pairs_df.iterrows()}
+
 
 if __name__ == '__main__':
-    # Iterate over input files and build a set
-    # containing the intersection of words and lemmas.
-    # Afterwards, load the embeddings based on that set.
-    # load_word_embeddings('/data/corola-word-embeddings.vec.zip')
-    # load_lemma_embeddings('/data/corola-lemma-embeddings.vec.zip')
-    # load_word_lemma_pairs('/data/word-lemmas.csv')
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
+                        level=logging.INFO)
     ds = WordEmebeddingsDataset(
         word_embeddings_file='/data/corola-word-embeddings.vec.zip',
         lemma_embeddings_file='/data/corola-lemma-embeddings.vec.zip',
         word_lemma_pairs_file='/data/word-lemmas.csv')
     ds.initialize()
+    for i in range(10):
+        print(ds._dataset[i])
+    ds.save_word_lemma_pairs('pairs.csv')
+    logging.info("That's all folks!")
