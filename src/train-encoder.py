@@ -1,3 +1,4 @@
+import logging
 from argparse import ArgumentParser
 from input import WordEmebeddingsDataset
 from modelfactory import build_autoencoder
@@ -44,6 +45,7 @@ def split_and_reshape(ds):
 
 
 def run(args):
+    logging.info("Loading dataset...")
     ds = WordEmebeddingsDataset(
         word_embeddings_file=args.word_embeddings_file,
         lemma_embeddings_file=args.lemma_embeddings_file,
@@ -52,6 +54,7 @@ def run(args):
     if args.save_common_wl_pairs_to:
         ds.save_word_lemma_pairs(args.save_common_wl_pairs_to)
 
+    logging.info("Building model...")
     model = build_autoencoder()
     param_grid = {
         'epochs': [args.num_epochs],
@@ -68,12 +71,15 @@ def run(args):
                       param_grid=param_grid,
                       n_jobs=-1,
                       verbose=1)
+
+    logging.info("Start searching for parameters...")
     we_train, we_test, le_train, le_test = split_and_reshape(ds)
     model = gs.fit(we_train, le_train)
     print('Best estimator:')
     print(model.best_estimator_)
     print('Best parameters:')
     print(model.best_params_)
+    logging.info("That's all folks!")
 
 
 def parse_arguments():
@@ -102,5 +108,7 @@ def parse_arguments():
 
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
+                        level=logging.INFO)
     args = parse_arguments()
     run(args)
