@@ -1,7 +1,7 @@
 import logging
 from argparse import ArgumentParser
 from input import WordEmebeddingsDataset
-from modelfactory import build_autoencoder
+from gridsearch.modelfactory import build_autoencoder
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 import numpy as np
