@@ -196,7 +196,29 @@ class WordEmebeddingsDataset:
             The dictionary of word and their associated lemmas.
         """
         pairs_df = pd.read_csv(self._word_lemma_pairs_file, sep='\t', header=0)
-        return {row['Word']: row['Lemma'] for _, row in pairs_df.iterrows()}
+        return {
+            row['Word']: row['Lemma']
+            for _, row in pairs_df.iterrows()
+            if self._is_valid_word(row['Word'])
+            and self._is_valid_word(row['Lemma'])
+        }
+
+    def _is_valid_word(self, word: str):
+        """
+        Determines if a word is valid by the presence of unusual characters.
+
+        Parameters
+        ----------
+        word: str
+            The word to check for validity.
+
+        Returns
+        -------
+        is_valid: boolean
+            Whether the word is valid or not.
+        """
+        return isinstance(word, str) and np.all(
+            [c.isalpha() or c == "'" or c == "-" for c in word])
 
 
 if __name__ == '__main__':
