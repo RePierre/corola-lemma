@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from input import WordEmebeddingsDataset
 from utils import split_and_reshape
 from vae.modelfactory import build_vae_model
+from vae.modelfactory import build_model_callbacks
 
 
 def run(args):
@@ -24,6 +25,7 @@ def run(args):
             y=le_train,
             epochs=args.num_epochs,
             batch_size=args.batch_size,
+            callbacks=build_model_callbacks(),
             shuffle=True)
 
 

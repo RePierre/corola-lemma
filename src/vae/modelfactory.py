@@ -1,29 +1,34 @@
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import Input
-from keras.layers import Layer
-from keras import backend as K
-from keras.layers import Lambda
-from keras.layers import Multiply
-from keras.layers import Add
-from keras.models import Model
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Input
+from tensorflow.keras.layers import Layer
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Lambda
+from tensorflow.keras.layers import Multiply
+from tensorflow.keras.layers import Add
+from tensorflow.keras.models import Model
+import tensorflow as tf
+import os.path as path
+import datetime
 
 
 def build_vae_model(intermediate_dim, latent_dim, original_dim):
 
-    x = Input(shape=(original_dim, ))
+    x = Input(shape=(original_dim, ), name="x")
     # Nonlinearity that maps z ~ N(0,1) to the output space?
     # (From Doersch et al.)
-    h = Dense(intermediate_dim, activation='relu')(x)
-    z_mu = Dense(latent_dim)(h)
-    z_log_var = Dense(latent_dim)(h)
+    h = Dense(intermediate_dim, activation='relu', name="h")(x)
+    z_mu = Dense(latent_dim, name="z_mu")(h)
+    z_log_var = Dense(latent_dim, name="z_log_var")(h)
 
-    z_mu, z_log_var = KLDivergenceLayer()([z_mu, z_log_var])
-    z_sigma = Lambda(lambda t: K.exp(0.5 * t))(z_log_var)
-    eps = Input(tensor=K.random_normal(
-        (K.shape(x)[0], latent_dim), mean=0.0, stddev=1.0))
-    z_eps = Multiply()([z_sigma, eps])
-    z = Add()([z_mu, z_eps])
+    z_mu, z_log_var = KLDivergenceLayer(name="KLDivergence")([z_mu, z_log_var])
+    z_sigma = Lambda(lambda t: K.exp(0.5 * t), name="z_sigma")(z_log_var)
+    eps = Input(tensor=K.random_normal((K.shape(x)[0], latent_dim),
+                                       mean=0.0,
+                                       stddev=1.0),
+                name="eps")
+    z_eps = Multiply(name="z_eps")([z_sigma, eps])
+    z = Add(name="z")([z_mu, z_eps])
 
     # Used to compute p(x_pred|z)
     decoder = Sequential([
@@ -60,3 +65,21 @@ def nll(y_true, y_pred):
     Bernoulli negative log likelihood.
     """
     return K.sum(K.binary_crossentropy(y_true, y_pred), axis=-1)
+
+
+def build_model_callbacks():
+    """
+    Builds the list of callbacks for model training.
+
+    Returns
+    -------
+    callbacks: list of callbacks
+        The callbacks to use for model training.
+    """
+    current_time = datetime.datetime.now().strftime('%Y-%m-%d-%H%M')
+    log_dir = path.join('./logs/', current_time)
+    tensorboard_display = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
+
+    early_stopping = tf.keras.callbacks.EarlyStopping(patience=2,
+                                                      monitor='loss')
+    return [early_stopping, tensorboard_display]
