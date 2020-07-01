@@ -13,8 +13,11 @@ class WordEmebeddingsDataset:
     """
     Represents the dataset of word and lemma embeddings.
     """
-    def __init__(self, word_embeddings_file, lemma_embeddings_file,
-                 word_lemma_pairs_file):
+    def __init__(self,
+                 word_embeddings_file,
+                 lemma_embeddings_file,
+                 word_lemma_pairs_file,
+                 word_inflections_file=None):
         """
         Initializes an instance of WordEmebeddingsDataset class.
 
@@ -26,10 +29,14 @@ class WordEmebeddingsDataset:
             The path to the zip file containing lemma embeddings.
         word_lemma_pairs_file: string
             The path to the CSV file containing word-lemma pairs.
+        word_inflections_file: string
+            The path to the file containing valid word inflections.
+            This file will be used to filter the list of words and lemmas.
         """
         self._word_embeddings_file = word_embeddings_file
         self._lemma_embeddings_file = lemma_embeddings_file
         self._word_lemma_pairs_file = word_lemma_pairs_file
+        self._word_inflections_file = word_inflections_file
 
     @property
     def words(self):
@@ -85,6 +92,10 @@ class WordEmebeddingsDataset:
         """
         # Maybe start another process to free some memory
         # https://stackoverflow.com/questions/32167386/force-garbage-collection-in-python-to-free-memory
+        if self._word_inflections_file:
+            logging.info("Loading word inflections...")
+            word_forms = self._load_word_inflections()
+
         logging.info("Loading word-lemma pairs...")
         pairs_dict = self._load_word_lemma_pairs()
         logging.info("Loading word embeddings...")
@@ -102,7 +113,10 @@ class WordEmebeddingsDataset:
         for word in common_words:
             word_embedding = we_dict[word]
             lemma = pairs_dict[word]
-            if lemma not in le_dict:
+            if (lemma not in le_dict) or (lemma not in word_forms):
+                # logging.info(
+                #     "Ignoring pair (word={}, lemma={}): lemma is invalid.".
+                #     format(word, lemma))
                 continue
             lemma_embedding = le_dict[lemma]
             self._dataset.append(
@@ -219,6 +233,26 @@ class WordEmebeddingsDataset:
         """
         return isinstance(word, str) and np.all(
             [c.isalpha() or c == "'" or c == "-" for c in word])
+
+    def _load_word_inflections(self):
+        """
+        Loads the set of word inflections if source file is specified.
+
+        Returns
+        -------
+        word_inflections: set of strings
+            The set of word inflections is source file is specified;
+        otherwise None.
+        """
+        if not self._word_inflections_file:
+            return None
+
+        word_inflections = set()
+        with open(self._word_inflections_file) as input_file:
+            for line in input_file:
+                word_inflections.add(line.lower())
+
+        return word_inflections
 
 
 if __name__ == '__main__':
