@@ -92,9 +92,8 @@ class WordEmebeddingsDataset:
         """
         # Maybe start another process to free some memory
         # https://stackoverflow.com/questions/32167386/force-garbage-collection-in-python-to-free-memory
-        if self._word_inflections_file:
-            logging.info("Loading word inflections...")
-            word_forms = self._load_word_inflections()
+        logging.info("Loading word inflections...")
+        word_forms = self._load_word_inflections()
 
         logging.info("Loading word-lemma pairs...")
         pairs_dict = self._load_word_lemma_pairs()
@@ -108,15 +107,15 @@ class WordEmebeddingsDataset:
         logging.info("Determining the common words...")
         # Intersect word sets to get common words
         common_words = pairs_dict.keys() & we_dict.keys()
+
         logging.info("Building the dataset...")
         self._dataset = []
         for word in common_words:
             word_embedding = we_dict[word]
             lemma = pairs_dict[word]
-            if (lemma not in le_dict) or (lemma not in word_forms):
-                # logging.info(
-                #     "Ignoring pair (word={}, lemma={}): lemma is invalid.".
-                #     format(word, lemma))
+            if lemma not in le_dict:
+                continue
+            if self._word_inflections_file and (lemma not in word_forms):
                 continue
             lemma_embedding = le_dict[lemma]
             self._dataset.append(
@@ -248,9 +247,9 @@ class WordEmebeddingsDataset:
             return None
 
         word_inflections = set()
-        with open(self._word_inflections_file) as input_file:
+        with open(self._word_inflections_file, encoding='UTF-8') as input_file:
             for line in input_file:
-                word_inflections.add(line.lower())
+                word_inflections.add(line.strip().lower())
 
         return word_inflections
 
@@ -261,9 +260,10 @@ if __name__ == '__main__':
     ds = WordEmebeddingsDataset(
         word_embeddings_file='/data/corola-word-embeddings.vec.zip',
         lemma_embeddings_file='/data/corola-lemma-embeddings.vec.zip',
-        word_lemma_pairs_file='/data/word-lemmas.csv')
+        word_lemma_pairs_file='/data/word-lemmas.csv',
+        word_inflections_file='/data/word-inflections.txt')
     ds.initialize()
-    for i in range(10):
-        print(ds._dataset[i])
-    ds.save_word_lemma_pairs('pairs.csv')
+    # for i in range(10):
+    #     print(ds._dataset[i])
+    # ds.save_word_lemma_pairs('pairs.csv')
     logging.info("That's all folks!")
