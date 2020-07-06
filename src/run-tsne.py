@@ -13,29 +13,43 @@ def run(args):
         word_inflections_file=args.word_inflections_file)
     ds.initialize()
 
-    lbl2idx = {}
+    clusters = {}
     X = []
-    for i in range(100):
+    j = 0
+    for i in range(50):
         word = ds.words[i]
         lemma = ds.lemmas[i]
         we = ds.word_embeddings[i]
         le = ds.lemma_embeddings[i]
-        if lemma not in lbl2idx:
-            lbl2idx[lemma] = i
+        if lemma not in clusters:
+            clusters[lemma] = {'index': j, 'words': {}}
             X.append(le)
-        lbl2idx[word] = i
+            j += 1
+        clusters[lemma]['words'][word] = j
         X.append(we)
+        j += 1
 
     logging.info("Running t-SNE with perplexity={}".format(args.perplexity))
     model = TSNE(n_components=2, perplexity=args.perplexity, random_state=2020)
     X = model.fit_transform(X)
     logging.info("Output shape: {}".format(X.shape))
-    fig, ax = plt.subplots(figsize=(40, 20))
-    ax.scatter(x=X[:, 0], y=X[:, 1])
 
-    for lbl, idx in lbl2idx.items():
-        ax.annotate(lbl, (X[idx, 0], X[idx, 1]))
-    plt.savefig("tsne-perplexity-{}.png".format(args.perplexity))
+    for lemma in clusters.keys():
+        plt.clf()
+        x, y, labels = [], [], []
+        index = clusters[lemma]['index']
+        x.append(X[index, 0])
+        y.append(X[index, 1])
+        labels.append(lemma)
+        for word, index in clusters[lemma]['words'].items():
+            x.append(X[index, 0])
+            y.append(X[index, 1])
+            labels.append(word)
+        fig, ax = plt.subplots(figsize=(40, 20))
+        ax.scatter(x=x, y=y)
+        for lbl, x_coord, y_coord in zip(labels, x, y):
+            ax.annotate(lbl, (x_coord, y_coord))
+        plt.savefig("{}-tsne-perplexity-{}.png".format(lemma, args.perplexity))
 
     logging.info("That's all folks!")
 

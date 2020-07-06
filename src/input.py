@@ -73,6 +73,13 @@ class WordEmebeddingsDataset:
         """
         return self._sample_size
 
+    @property
+    def num_samples(self):
+        """
+        Returns the number of word-lemma pairs from the dataset.
+        """
+        return len(self._dataset)
+
     def initialize(self, with_preview=False):
         """
         Initializes the data sets by performing a join between word embeddings,
