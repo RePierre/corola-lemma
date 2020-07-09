@@ -2,7 +2,7 @@ import logging
 from argparse import ArgumentParser
 from input import WordEmebeddingsDataset
 from sklearn.manifold import TSNE
-import matplotlib.pyplot as plt
+import pickle
 
 
 def run(args):
@@ -16,7 +16,7 @@ def run(args):
     clusters = {}
     X = []
     j = 0
-    for i in range(50):
+    for i in range(ds.num_samples):
         word = ds.words[i]
         lemma = ds.lemmas[i]
         we = ds.word_embeddings[i]
@@ -34,22 +34,15 @@ def run(args):
     X = model.fit_transform(X)
     logging.info("Output shape: {}".format(X.shape))
 
-    for lemma in clusters.keys():
-        plt.clf()
-        x, y, labels = [], [], []
-        index = clusters[lemma]['index']
-        x.append(X[index, 0])
-        y.append(X[index, 1])
-        labels.append(lemma)
-        for word, index in clusters[lemma]['words'].items():
-            x.append(X[index, 0])
-            y.append(X[index, 1])
-            labels.append(word)
-        fig, ax = plt.subplots(figsize=(40, 20))
-        ax.scatter(x=x, y=y)
-        for lbl, x_coord, y_coord in zip(labels, x, y):
-            ax.annotate(lbl, (x_coord, y_coord))
-        plt.savefig("{}-tsne-perplexity-{}.png".format(lemma, args.perplexity))
+    logging.info("Writing embeddings to {}...".format(
+        args.tsne_embeddings_file))
+    with open(args.tsne_embeddings_file, 'wb') as out_f:
+        pickle.dump(X, out_f)
+
+    logging.info("Writing embeddings map to {}...".format(
+        args.tsne_embeddings_map))
+    with open(args.tsne_embeddings_map, 'wb') as out_f:
+        pickle.dump(clusters, out_f)
 
     logging.info("That's all folks!")
 
@@ -76,6 +69,14 @@ def parse_arguments():
                         help="Value for perplexity parameter of TSNE.",
                         type=int,
                         default=10)
+    parser.add_argument(
+        '--tsne-embeddings-file',
+        help='Path to the output where to save the post t-SNE embeddings.',
+        default='tsne-results.obj')
+    parser.add_argument(
+        '--tsne-embeddings-map',
+        help='Path to the output file mapping embeddings with words.',
+        default='tsne-word-map.obj')
     return parser.parse_args()
 
 
