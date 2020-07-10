@@ -68,6 +68,8 @@ def run(args):
             ax.annotate(word, (points[index, 0], points[index, 1]))
     logging.info("Finished annotating.")
     if args.interactive:
+        import matplotlib
+        matplotlib.use('TkAgg')
         plt.show()
     else:
         logging.info("Saving plot to {}...".format(args.output_file))
