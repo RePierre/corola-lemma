@@ -32,7 +32,10 @@ def run(args):
             y=le_train,
             epochs=args.num_epochs,
             batch_size=args.batch_size,
-            callbacks=build_model_callbacks(),
+            callbacks=build_model_callbacks(
+                tensorboard_log_dir=args.tensorboard_log_dir,
+                use_early_stopping=not args.no_early_stopping,
+                early_stopping_patience=args.early_stopping_patience),
             shuffle=True)
 
 
@@ -73,6 +76,19 @@ def parse_arguments():
         help="Number of dimensions of the intermediate representation.",
         type=int,
         default=512)
+    parser.add_argument('-tensorboard-log-dir',
+                        help='The root path where to save TensorBoard logs.',
+                        default='logs')
+    parser.add_argument(
+        '--no-early-stopping',
+        help=
+        'Specifies whether to remove EarlyStopping callback from the model.',
+        action='store_false')
+    parser.add_argument(
+        '-early-stopping-patience',
+        help='Specifies how many epochs to wait before early stopping.',
+        type=int,
+        default=2)
     return parser.parse_args()
 
 

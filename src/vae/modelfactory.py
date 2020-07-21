@@ -68,8 +68,24 @@ def nll(y_true, y_pred):
 
 
 def build_model_callbacks():
+
+def build_model_callbacks(tensorboard_log_dir='logs',
+                          use_early_stopping=True,
+                          early_stopping_patience=2):
     """
     Builds the list of callbacks for model training.
+
+    Parameters
+    ----------
+    tensorboard_log_dir:string, optional
+        The root path where to save TensorBoard logs.
+        Default value is 'logs' dir in current directory.
+    use_early_stopping: boolean, optional
+        Specifies whether to add or not EarlyStopping callback to the model.
+        Default is True.
+    early_stopping_patience: integer, optional
+        Specifies how many epochs to wait before early stopping.
+        Default is 2.
 
     Returns
     -------
@@ -77,9 +93,12 @@ def build_model_callbacks():
         The callbacks to use for model training.
     """
     current_time = datetime.datetime.now().strftime('%Y-%m-%d-%H%M')
-    log_dir = path.join('./logs/', current_time)
+    log_dir = path.join(tensorboard_log_dir, current_time)
     tensorboard_display = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
+    callbacks = [tensorboard_display]
+    if use_early_stopping:
+        early_stopping = tf.keras.callbacks.EarlyStopping(patience=2,
+                                                          monitor='loss')
+        callbacks.append(early_stopping)
 
-    early_stopping = tf.keras.callbacks.EarlyStopping(patience=2,
-                                                      monitor='loss')
-    return [early_stopping, tensorboard_display]
+    return callbacks
