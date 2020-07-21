@@ -64,10 +64,15 @@ def parse_arguments():
     parser.add_argument('--batch-size',
                         help="Batch size for training.",
                         default=128)
-    parser.add_argument('--latent_dim',
+    parser.add_argument('--latent-dim',
                         help="Number of dimensions of the latent variable.",
                         type=int,
-                        default=10)
+                        default=100)
+    parser.add_argument(
+        '--intermediate-dim',
+        help="Number of dimensions of the intermediate representation.",
+        type=int,
+        default=512)
     return parser.parse_args()
 
 
