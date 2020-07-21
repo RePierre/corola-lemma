@@ -4,6 +4,7 @@ import numpy as np
 from collections import namedtuple
 import csv
 import logging
+import pickle
 
 DataSample = namedtuple('DataSample',
                         ['word', 'word_embedding', 'lemma', 'lemma_embedding'])
@@ -14,10 +15,11 @@ class WordEmebeddingsDataset:
     Represents the dataset of word and lemma embeddings.
     """
     def __init__(self,
-                 word_embeddings_file,
-                 lemma_embeddings_file,
-                 word_lemma_pairs_file,
-                 word_inflections_file=None):
+                 word_embeddings_file=None,
+                 lemma_embeddings_file=None,
+                 word_lemma_pairs_file=None,
+                 word_inflections_file=None,
+                 data_file=None):
         """
         Initializes an instance of WordEmebeddingsDataset class.
 
@@ -32,11 +34,14 @@ class WordEmebeddingsDataset:
         word_inflections_file: string
             The path to the file containing valid word inflections.
             This file will be used to filter the list of words and lemmas.
+        data_file: string
+            The path to the file containing pickled data.
         """
         self._word_embeddings_file = word_embeddings_file
         self._lemma_embeddings_file = lemma_embeddings_file
         self._word_lemma_pairs_file = word_lemma_pairs_file
         self._word_inflections_file = word_inflections_file
+        self._data_file = data_file
 
     @property
     def words(self):
@@ -80,16 +85,10 @@ class WordEmebeddingsDataset:
         """
         return len(self._dataset)
 
-    def initialize(self, with_preview=False):
+    def initialize(self):
         """
         Initializes the data sets by performing a join between word embeddings,
         word-lemma pairs and lemma embeddings.
-
-        Parameters
-        ----------
-        with_preview: bool, optional
-            If set to true will print previews of the loaded data sets.
-            Default is False.
 
         Raises
         ------
@@ -99,6 +98,44 @@ class WordEmebeddingsDataset:
         """
         # Maybe start another process to free some memory
         # https://stackoverflow.com/questions/32167386/force-garbage-collection-in-python-to-free-memory
+        if self._data_file:
+            logging.info("Loading dataset from file {}".format(
+                self._data_file))
+            with open(self._data_file, 'rb') as data_file:
+                self._dataset = pickle.load(data_file)
+            self._sample_size = self._dataset[0].word_embedding.shape[0]
+        else:
+            self._build_dataset()
+        logging.info("Done. Total samples: {}".format(len(self._dataset)))
+
+    def save_word_lemma_pairs(self, file_path):
+        """
+        Saves the word-lemma pairs from dataset to the specified file.
+
+        Parameters
+        ----------
+        file_path: string
+            The path to the csv file where to save the word-lemma pairs.
+        """
+        with open(file_path, 'wt') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Word', 'Lemma'])
+            for s in self._dataset:
+                writer.writerow([s.word, s.lemma])
+
+    def save(self, file_path):
+        """
+        Saves the dataset into the specified file.
+
+        Parameters
+        ----------
+        file_path: string
+            The path to the file where to save the dataset.
+        """
+        with open(file_path, 'wb') as data_file:
+            pickle.dump(self._dataset, data_file)
+
+    def _build_dataset(self):
         logging.info("Loading word inflections...")
         word_forms = self._load_word_inflections()
 
@@ -130,22 +167,6 @@ class WordEmebeddingsDataset:
                            word_embedding=word_embedding,
                            lemma=lemma,
                            lemma_embedding=lemma_embedding))
-        logging.info("Done. Total samples: {}".format(len(self._dataset)))
-
-    def save_word_lemma_pairs(self, file_path):
-        """
-        Saves the word-lemma pairs from dataset to the specified file.
-
-        Parameters
-        ----------
-        file_path: string
-            The path to the csv file where to save the word-lemma pairs.
-        """
-        with open(file_path, 'wt') as f:
-            writer = csv.writer(f)
-            writer.writerow(['Word', 'Lemma'])
-            for s in self._dataset:
-                writer.writerow([s.word, s.lemma])
 
     def _determine_sample_size(self, word_embeddings, lemma_embeddings):
         """
@@ -270,7 +291,10 @@ if __name__ == '__main__':
         word_lemma_pairs_file='/data/word-lemmas.csv',
         word_inflections_file='/data/word-inflections.txt')
     ds.initialize()
-    # for i in range(10):
-    #     print(ds._dataset[i])
+    ds.save('/data/dataset.data')
+    ds = WordEmebeddingsDataset(data_file='/data/dataset.data')
+    ds.initialize()
+    for i in range(10):
+        print(ds._dataset[i])
     # ds.save_word_lemma_pairs('pairs.csv')
     logging.info("That's all folks!")

@@ -4,6 +4,7 @@ from input import WordEmebeddingsDataset
 from utils import split_and_reshape
 from vae.modelfactory import build_vae_model
 from vae.modelfactory import build_model_callbacks
+from input import DataSample
 
 
 def run(args):
@@ -11,16 +12,22 @@ def run(args):
     ds = WordEmebeddingsDataset(
         word_embeddings_file=args.word_embeddings_file,
         lemma_embeddings_file=args.lemma_embeddings_file,
-        word_lemma_pairs_file=args.word_lemma_pairs_file)
+        word_lemma_pairs_file=args.word_lemma_pairs_file,
+        word_inflections_file=args.word_inflections_file,
+        data_file=args.data_file)
     ds.initialize()
 
     logging.info("Building the model...")
-    vae, _, _ = build_vae_model(int(ds.sample_size / 2), args.latent_dim,
+    vae, _, _ = build_vae_model(args.intermediate_dim, args.latent_dim,
                                 ds.sample_size)
-    print(vae.summary())
+    # print(vae.summary())
 
     logging.info("Start training the model...")
     we_train, we_test, le_train, le_test = split_and_reshape(ds)
+    we_train = we_train / 255
+    we_test = we_test / 255
+    le_train = le_train / 255
+    le_test = le_test / 255
     vae.fit(x=we_train,
             y=le_train,
             epochs=args.num_epochs,
@@ -43,6 +50,13 @@ def parse_arguments():
         '--word-lemma-pairs-file',
         help='The path to the csv file containing word-lemma pairs.',
         default='/data/word-lemmas.csv')
+    parser.add_argument(
+        '--word-inflections-file',
+        help='The path to the text file containing word inflections.',
+        default='/data/word-inflections.txt')
+    parser.add_argument('--data-file',
+                        help='The path to the data file for the dataset.',
+                        default=None)
     parser.add_argument('--num-epochs',
                         help='Number of training epochs.',
                         type=int,
