@@ -85,7 +85,7 @@ def parse_arguments():
         'Specifies whether to remove EarlyStopping callback from the model.',
         action='store_false')
     parser.add_argument(
-        '-early-stopping-patience',
+        '--early-stopping-patience',
         help='Specifies how many epochs to wait before early stopping.',
         type=int,
         default=2)
