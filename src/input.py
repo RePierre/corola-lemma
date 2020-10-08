@@ -5,6 +5,7 @@ from collections import namedtuple
 import csv
 import logging
 import pickle
+from argparse import ArgumentParser
 
 DataSample = namedtuple('DataSample',
                         ['word', 'word_embedding', 'lemma', 'lemma_embedding'])
@@ -282,19 +283,83 @@ class WordEmebeddingsDataset:
         return word_inflections
 
 
+def save_pairs(args):
+    ds = WordEmebeddingsDataset(
+        word_embeddings_file=args.word_embeddings_file,
+        lemma_embeddings_file=args.lemma_embeddings_file,
+        word_lemma_pairs_file=args.word_lemma_pairs_file,
+        word_inflections_file=args.word_inflections_file)
+    ds.initialize()
+    ds.save_word_lemma_pairs(args.output_file)
+
+
+def save_image(args):
+    ds = WordEmebeddingsDataset(
+        word_embeddings_file=args.word_embeddings_file,
+        lemma_embeddings_file=args.lemma_embeddings_file,
+        word_lemma_pairs_file=args.word_lemma_pairs_file,
+        word_inflections_file=args.word_inflections_file)
+    ds.initialize()
+    ds.save(args.output_file)
+    if args.test_image:
+        logging.info('Testing the image saved at {}...'.format(
+            args.output_file))
+        ds = WordEmebeddingsDataset(data_file=args.output_file)
+        ds.initialize()
+        for i in range(args.num_test_samples):
+            print(ds._dataset[i])
+
+
+def parse_arguments():
+    parser = ArgumentParser()
+    parser.add_argument(
+        '--word-embeddings-file',
+        help='The path to the zip file containing word embeddings.',
+        default='/data/corola-word-embeddings.vec.zip')
+    parser.add_argument(
+        '--lemma-embeddings-file',
+        help='The path to the zip file containing lemma embeddings.',
+        default='/data/corola-lemma-embeddings.vec.zip')
+    parser.add_argument(
+        '--word-lemma-pairs-file',
+        help='The path to the csv file containing word-lemma pairs.',
+        default='/data/word-lemmas.csv')
+    parser.add_argument(
+        '--word-inflections-file',
+        help='The path to the text file containing word inflections.',
+        default='/data/word-inflections.txt')
+
+    subparsers = parser.add_subparsers()
+
+    save_pairs_parser = subparsers.add_parser(
+        'save-pairs', help="Create a file containing word-lemma pairs.")
+    save_pairs_parser.add_argument(
+        '--output-file',
+        help='The path to the output file containing word-lemma pairs.',
+        default='./pairs.csv')
+    save_pairs_parser.set_defaults(func=save_pairs)
+
+    save_image_parser = subparsers.add_parser(
+        'save-image',
+        help='Creates a pickled image of the dataset for quick loading.')
+    save_image_parser.add_argument('--output-file',
+                                   help='The path to the pickled image file.',
+                                   default='/data/dataset.data')
+    save_image_parser.add_argument('--test-image',
+                                   help='Test the image after saving.',
+                                   action='store_true')
+    save_image_parser.add_argument(
+        '--num-test-samples',
+        help='The number of samples from to display when testing the image.',
+        type=int,
+        default=10)
+    save_image_parser.set_defaults(func=save_image)
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                         level=logging.INFO)
-    ds = WordEmebeddingsDataset(
-        word_embeddings_file='/data/corola-word-embeddings.vec.zip',
-        lemma_embeddings_file='/data/corola-lemma-embeddings.vec.zip',
-        word_lemma_pairs_file='/data/word-lemmas.csv',
-        word_inflections_file='/data/word-inflections.txt')
-    ds.initialize()
-    ds.save('/data/dataset.data')
-    ds = WordEmebeddingsDataset(data_file='/data/dataset.data')
-    ds.initialize()
-    for i in range(10):
-        print(ds._dataset[i])
-    # ds.save_word_lemma_pairs('pairs.csv')
+    args = parse_arguments()
+    args.func(args)
     logging.info("That's all folks!")
