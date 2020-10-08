@@ -19,7 +19,7 @@ def run(args):
 
     logging.info("Building the model...")
     vae, _, _ = build_vae_model(args.intermediate_dim, args.latent_dim,
-                                ds.sample_size)
+                                ds.sample_size, not args.reconstruct_word)
     # print(vae.summary())
 
     logging.info("Start training the model...")
@@ -79,16 +79,18 @@ def parse_arguments():
     parser.add_argument('-tensorboard-log-dir',
                         help='The root path where to save TensorBoard logs.',
                         default='logs')
-    parser.add_argument(
-        '--no-early-stopping',
-        help=
-        'Specifies whether to remove EarlyStopping callback from the model.',
-        action='store_false')
+    parser.add_argument('--no-early-stopping',
+                        help='Remove EarlyStopping callback from the model.',
+                        action='store_false')
     parser.add_argument(
         '--early-stopping-patience',
         help='Specifies how many epochs to wait before early stopping.',
         type=int,
         default=2)
+    parser.add_argument(
+        '--reconstruct-word',
+        help='Flag to signal the model to reconstruct word instead of lemma.',
+        action='store_true')
     return parser.parse_args()
 
 
