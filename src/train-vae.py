@@ -2,8 +2,8 @@ import logging
 from argparse import ArgumentParser
 from input import WordEmebeddingsDataset
 from utils import split_and_reshape
-from vae.modelfactory import build_vae_model
-from vae.modelfactory import build_model_callbacks
+from vae import build_vae_model
+from vae import build_model_callbacks
 from input import DataSample
 
 
