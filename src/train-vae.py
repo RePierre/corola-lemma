@@ -76,9 +76,9 @@ def parse_arguments():
         help="Number of dimensions of the intermediate representation.",
         type=int,
         default=512)
-    parser.add_argument('-tensorboard-log-dir',
+    parser.add_argument('--tensorboard-log-dir',
                         help='The root path where to save TensorBoard logs.',
-                        default='logs')
+                        default='./logs')
     parser.add_argument('--no-early-stopping',
                         help='Remove EarlyStopping callback from the model.',
                         action='store_false')
