@@ -134,7 +134,7 @@ def load_input(from_console, file_name):
     if from_console:
         while True:
             input_seq = input("Input: ")
-            yield input_seq
+            yield input_seq.strip()
             yn = input("Another? [y/N]: ")
             if (not yn) or (yn.lower() == 'n'):
                 break
@@ -143,7 +143,7 @@ def load_input(from_console, file_name):
             lines = f.readlines()
 
         for line in lines:
-            yield line
+            yield line.strip()
 
 
 def read_training_data(file_path, num_samples):
