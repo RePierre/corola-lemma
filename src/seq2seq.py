@@ -10,6 +10,7 @@ def get_text_metadata(text):
     for line in text:
         alphabet = alphabet.union(set([c for c in line]))
         max_len = max(max_len, len(line))
+    alphabet = alphabet.union(set(' '))
     return sorted(list(alphabet)), max_len
 
 
