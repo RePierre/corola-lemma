@@ -240,8 +240,11 @@ def train_model(args):
 def parse_arguments():
     root_parser = ArgumentParser()
 
-    root_parser.add_argument('--data-path', default="fra.txt")
-    root_parser.add_argument('--num_samples', type=int, default=10000)
+    root_parser.add_argument('--data-path', default="train.csv")
+    root_parser.add_argument('--num_samples', type=int, default=1000000)
+    root_parser.add_argument('--skip-first-row', type=bool, default=True)
+    root_parser.add_argument('--three-columns', type=bool, default=False)
+    root_parser.add_argument('--column-separator', type=str, default=',')
 
     subparsers = root_parser.add_subparsers()
 
@@ -295,14 +298,15 @@ def parse_arguments():
         '--latent-dim',
         help="Number of dimensions of the latent hidden layer.",
         type=int,
-        default=100)
+        default=256)
     test_model_parser.add_argument(
         '--keyboard-input',
         help="Signals that the input should be read from keyboard.",
         action='store_true')
     test_model_parser.add_argument(
         '--input-file',
-        help="The path to the input file containing test data.")
+        help="The path to the input file containing test data.",
+        default="test.csv")
     return root_parser.parse_args()
 
 
