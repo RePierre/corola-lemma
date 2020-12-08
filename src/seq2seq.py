@@ -2,6 +2,8 @@ from argparse import ArgumentParser
 import numpy as np
 import logging
 from tensorflow import keras
+from pandas import DataFrame
+import pandas as pd
 
 
 def get_text_metadata(text):
@@ -146,24 +148,47 @@ def load_input(from_console, file_name):
             yield line.strip()
 
 
-def read_training_data(file_path, num_samples):
-    with open(file_path, 'r', encoding="utf-8") as f:
-        lines = f.read().split("\n")
+def read_training_data(file_path,
+                       separator=",",
+                       encoding="utf-8",
+                       target_text_prefix="\t",
+                       target_txt_suffix="\n"):
+    """Reads the training data from specified CSV file.
 
+    Parameters
+    ----------
+    file_path: string
+        The path to the input file containing training data in CSV format.
+    separator: string, optional
+        The separator character of the CSV file. Default is ','.
+    encoding: string, optional
+        The encoding of the input file. Default is 'utf-8'.
+    target_text_prefix: string, optional
+        The marker that is prepended to the target text. Default is <tab>.
+    target_text_suffix: string, optional
+        The marker that is appended to the target text. Default is <newline>.
+
+    Returns
+    -------
+    (input_texts, target_texts)
+        A tuple of lists of strings.
+    """
+    df = pd.read_csv(file_path, sep=separator, encoding=encoding, header=0)
     input_texts = []
     target_texts = []
-    for line in lines[:min(num_samples, len(lines) - 1)]:
-        input_text, target_text, _ = line.split("\t")
-        target_text = "\t" + target_text + "\n"
-        input_texts.append(input_text)
-        target_texts.append(target_text)
+    for row in df.iterrows():
+        input_texts.append(row['Word'])
+        target_texts.append(target_text_prefix + row['Lemma'] +
+                            target_txt_suffix)
 
     return input_texts, target_texts
 
 
 def test_model(args):
-    input_texts, target_texts = read_training_data(args.data_path,
-                                                   args.num_samples)
+    input_texts, target_texts = read_training_data(
+        args.data_path,
+        separator=args.column_separator,
+        encoding=args.data_encoding)
     input_characters, max_encoder_seq_length = get_text_metadata(input_texts)
     input_map, inv_input_map = build_char_maps(input_characters)
 
@@ -193,12 +218,17 @@ def test_model(args):
             target_seq = np.zeros((1, 1, num_decoder_tokens))
             target_seq[0, 0, sampled_token_index] = 1.0
             encoder_state = [h, c]
-        print("Prediction: {}".format(prediction))
+        message = "{:20} {:20}".format(line, prediction)
+        if args.keyboard_input:
+            message = "Prediction: {}".format(prediction)
+        print(message)
 
 
 def train_model(args):
-    input_texts, target_texts = read_training_data(args.data_path,
-                                                   args.num_samples)
+    input_texts, target_texts = read_training_data(
+        args.data_path,
+        separator=args.column_separator,
+        encoding=args.data_encoding)
     input_characters, max_encoder_seq_length = get_text_metadata(input_texts)
     input_map, inv_input_map = build_char_maps(input_characters)
     num_encoder_tokens = len(input_characters)
@@ -241,10 +271,11 @@ def parse_arguments():
     root_parser = ArgumentParser()
 
     root_parser.add_argument('--data-path', default="train.csv")
-    root_parser.add_argument('--num_samples', type=int, default=1000000)
-    root_parser.add_argument('--skip-first-row', type=bool, default=True)
-    root_parser.add_argument('--three-columns', type=bool, default=False)
     root_parser.add_argument('--column-separator', type=str, default=',')
+    root_parser.add_argument('--data-encoding',
+                             help="The encoding of the input file.",
+                             type=str,
+                             default='utf-8')
 
     subparsers = root_parser.add_subparsers()
 
