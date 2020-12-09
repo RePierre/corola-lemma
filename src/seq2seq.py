@@ -133,22 +133,6 @@ def build_decoder_target(text, char_map, max_seq_len):
     return result
 
 
-def load_input(from_console, file_name):
-    if from_console:
-        while True:
-            input_seq = input("Input: ")
-            yield input_seq.strip()
-            yn = input("Another? [y/N]: ")
-            if (not yn) or (yn.lower() == 'n'):
-                break
-    else:
-        with open(file_name, 'rt', encoding='utf-8') as f:
-            lines = f.readlines()
-
-        for line in lines:
-            yield line.strip()
-
-
 def read_training_data(file_path,
                        separator=",",
                        encoding="utf-8",
