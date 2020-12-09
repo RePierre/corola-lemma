@@ -4,6 +4,7 @@ import logging
 from tensorflow import keras
 from pandas import DataFrame
 import pandas as pd
+import csv
 
 
 def get_text_metadata(text):
@@ -176,12 +177,60 @@ def read_training_data(file_path,
     df = pd.read_csv(file_path, sep=separator, encoding=encoding, header=0)
     input_texts = []
     target_texts = []
-    for row in df.iterrows():
+    for _, row in df.iterrows():
         input_texts.append(row['Word'])
         target_texts.append(target_text_prefix + row['Lemma'] +
                             target_txt_suffix)
 
     return input_texts, target_texts
+
+
+def predict_lemma(word, input_map, max_encoder_seq_length, num_decoder_tokens,
+                  encoder, decoder, target_map, inv_target_map,
+                  max_decoder_seq_length):
+    """Predicts the lemma for a specified word.
+
+    Parameters
+    ----------
+    word: string
+        The word for which to predict schema.
+    input_map: dict
+        The dict that maps characters to their indices.
+    max_encoder_seq_length: integer
+        The maximum length of a word for the encoder model.
+    num_decoder_tokens: integer
+        The number of tokens in the decoder output.
+    encoder: keras.Model
+        The encoder model.
+    decoder: keras.Model
+        The decoder model.
+    target_map: dict
+        The dict that maps indices to their characters.
+    inv_target_map: dict
+        The dict that maps characters to their indices.
+    max_decoder_seq_length: integer
+        The maximum length of the word for the decoder model.
+    """
+    encoded_line = build_encoder_input([word], input_map,
+                                       max_encoder_seq_length)
+    target_seq = np.zeros((1, 1, num_decoder_tokens))
+    target_seq[0, 0, target_map['\t']] = 1.0
+
+    stop_condition = False
+    prediction = ""
+    encoder_state = encoder.predict(encoded_line)
+    while not stop_condition:
+        output_tokens, h, c = decoder.predict([target_seq] + encoder_state)
+        sampled_token_index = np.argmax(output_tokens[0, -1, :])
+        sampled_char = inv_target_map[sampled_token_index]
+        prediction += sampled_char
+
+        if sampled_char == '\n' or len(prediction) > max_decoder_seq_length:
+            stop_condition = True
+        target_seq = np.zeros((1, 1, num_decoder_tokens))
+        target_seq[0, 0, sampled_token_index] = 1.0
+        encoder_state = [h, c]
+    return prediction
 
 
 def test_model(args):
@@ -197,31 +246,22 @@ def test_model(args):
     num_decoder_tokens = len(target_characters)
 
     encoder, decoder = load_model(args.load_model_from, args.latent_dim)
-    for line in load_input(args.keyboard_input, args.input_file):
-        encoded_line = build_encoder_input([line], input_map,
-                                           max_encoder_seq_length)
-        target_seq = np.zeros((1, 1, num_decoder_tokens))
-        target_seq[0, 0, target_map['\t']] = 1.0
-
-        stop_condition = False
-        prediction = ""
-        encoder_state = encoder.predict(encoded_line)
-        while not stop_condition:
-            output_tokens, h, c = decoder.predict([target_seq] + encoder_state)
-            sampled_token_index = np.argmax(output_tokens[0, -1, :])
-            sampled_char = inv_target_map[sampled_token_index]
-            prediction += sampled_char
-
-            if sampled_char == '\n' or len(
-                    prediction) > max_decoder_seq_length:
-                stop_condition = True
-            target_seq = np.zeros((1, 1, num_decoder_tokens))
-            target_seq[0, 0, sampled_token_index] = 1.0
-            encoder_state = [h, c]
-        message = "{:20} {:20}".format(line, prediction)
-        if args.keyboard_input:
-            message = "Prediction: {}".format(prediction)
-        print(message)
+    data = pd.read_csv(args.input_file,
+                       sep=args.column_separator,
+                       encoding=args.data_encoding,
+                       header=0)
+    data['Prediction'] = ''
+    for _, row in data.iterrows():
+        word = row['Word']
+        prediction = predict_lemma(word, input_map, max_encoder_seq_length,
+                                   num_decoder_tokens, encoder, decoder,
+                                   target_map, inv_target_map,
+                                   max_decoder_seq_length)
+        row['Prediction'] = prediction.strip()
+    data.to_csv(args.output_file,
+                sep=args.column_separator,
+                encoding=args.data_encoding,
+                quoting=csv.QUOTE_NONE)
 
 
 def train_model(args):
@@ -331,13 +371,13 @@ def parse_arguments():
         type=int,
         default=256)
     test_model_parser.add_argument(
-        '--keyboard-input',
-        help="Signals that the input should be read from keyboard.",
-        action='store_true')
-    test_model_parser.add_argument(
         '--input-file',
         help="The path to the input file containing test data.",
         default="test.csv")
+    test_model_parser.add_argument(
+        '--output-file',
+        help="The path of the output file containing predictions",
+        default="predictions.csv")
     return root_parser.parse_args()
 
 
