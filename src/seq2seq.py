@@ -8,6 +8,18 @@ import csv
 
 
 def get_text_metadata(text):
+    """Builds the alphabet and determines max token length from text.
+
+    Parameters
+    ----------
+    text: string
+        The collection of text lines.
+
+    Returns
+    -------
+    (alphabet, max_len)
+        Tuple containing the list of characters and the maximum length of the tokens.
+    """
     alphabet = set()
     max_len = 0
     for line in text:
@@ -18,6 +30,18 @@ def get_text_metadata(text):
 
 
 def build_char_maps(alphabet):
+    """Builds the dicts that map between chars and indices.
+
+    Parameters
+    ----------
+    alphabet: iterable of characters
+        The collection of characters in the alphabet.
+
+    Returns
+    -------
+    (char_map, inv_char_map)
+        A tuple of dicts that map from char to their indices and vice-versa.
+    """
     char_map = {c: i for i, c in enumerate(alphabet)}
     inv_char_map = {i: c for i, c in enumerate(alphabet)}
     return char_map, inv_char_map
@@ -106,15 +130,47 @@ def load_model(model_path, num_latent_dimensions):
 
 
 def build_encoder_input(text, char_map, max_seq_len):
-    X = np.zeros((len(text), max_seq_len, len(char_map)), dtype="float32")
+    """Converts the text into an input tensor for the encoder.
+
+    Parameters
+    ----------
+    text: string
+        The text to convert into a tensor.
+    char_map: dict
+        The dict that maps characters to their indices.
+    max_seq_len: integer
+        The maximum length of an input text.
+
+    Returns
+    -------
+    result
+        A tensor with shape(len(text), max_seq_len, len(char_map)).
+    """
+    result = np.zeros((len(text), max_seq_len, len(char_map)), dtype="float32")
     for i, line in enumerate(text):
         for j, char in enumerate(line):
-            X[i, j, char_map[char]] = 1.0
-        X[i, j + 1:, char_map[' ']] = 1.0
-    return X
+            result[i, j, char_map[char]] = 1.0
+        result[i, j + 1:, char_map[' ']] = 1.0
+    return result
 
 
 def build_decoder_input(text, char_map, max_seq_len):
+    """Converts the text into the input tensor for the decoder.
+
+    Parameters
+    ----------
+    text: string
+        The text to convert into a tensor.
+    char_map: dict
+        The dict that maps characters to their indices.
+    max_seq_len: integer
+        The maximum length of an input text.
+
+    Returns
+    -------
+    result
+        A tensor with shape(len(text), max_seq_len, len(char_map)).
+    """
     result = np.zeros((len(text), max_seq_len, len(char_map)), dtype="float32")
     for i, line in enumerate(text):
         for j, char in enumerate(line):
@@ -124,6 +180,22 @@ def build_decoder_input(text, char_map, max_seq_len):
 
 
 def build_decoder_target(text, char_map, max_seq_len):
+    """Converts the text into the output tensor for the decoder.
+
+    Parameters
+    ----------
+    text: string
+        The text to convert into a tensor.
+    char_map: dict
+        The dict that maps characters to their indices.
+    max_seq_len: integer
+        The maximum length of an input text.
+
+    Returns
+    -------
+    result
+        A tensor with shape(len(text), max_seq_len, len(char_map)).
+    """
     result = np.zeros((len(text), max_seq_len, len(char_map)), dtype="float32")
     for i, line in enumerate(text):
         for j, char in enumerate(line):
