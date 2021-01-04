@@ -43,6 +43,15 @@ def levenshtein_distance(source, target):
     return v1[len(target)]
 
 
+def plot_histogram(data_frame,
+                   num_bins,
+                   output_file,
+                   plot_label="Levenshtein distance from prediction to lemma"):
+    ax = data_frame.plot.hist(bins=num_bins)
+    ax.set_xlabel(plot_label)
+    ax.figure.savefig(output_file)
+
+
 def interpret_results(args):
     df = pd.read_csv(args.results_file,
                      sep=args.separator,
@@ -58,9 +67,8 @@ def interpret_results(args):
     print("Median Levenshtein distance: {}".format(dist_series.median()))
     print("Distance groups")
     print(df.groupby(['Levenshtein']).count())
-    ax = dist_series.plot.hist(bins=max_val)
-    ax.set_xlabel("Levenshtein distance from prediction to lemma")
-    ax.figure.savefig(args.output_file)
+    plot_histogram(dist_series, max_val, args.output_histogram)
+    df.to_csv(args.output_file, index=False, index_label="Index")
 
 
 def parse_arguments():
@@ -74,9 +82,12 @@ def parse_arguments():
     parser.add_argument('--encoding',
                         help="The encoding of the CSV file.",
                         default="utf-8")
-    parser.add_argument('--output-file',
-                        help="Path of the output file.",
+    parser.add_argument('--output-histogram',
+                        help="Path of the output histogram image.",
                         default="results-hist.png")
+    parser.add_argument('--output-file',
+                        help="Path to the output CSV file.",
+                        default="output.csv")
     return parser.parse_args()
 
 
