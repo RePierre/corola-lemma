@@ -317,7 +317,8 @@ def test_model(args):
     data.to_csv(args.output_file,
                 sep=args.column_separator,
                 encoding=args.data_encoding,
-                quoting=csv.QUOTE_NONE)
+                quoting=csv.QUOTE_NONE,
+                index=False)
 
 
 def train_model(args):
