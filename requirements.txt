@@ -29,7 +29,7 @@ idna==2.10
 importmagic==0.1.7
 jedi==0.17.1
 jmespath==0.10.0
-joblib==0.16.0
+joblib==1.2.0
 Keras==2.4.3
 Keras-Preprocessing==1.1.2
 kiwisolver==1.2.0
