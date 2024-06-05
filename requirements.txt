@@ -82,7 +82,7 @@ tqdm==4.66.3
 typed-ast==1.4.1
 urllib3==1.26.18
 wasabi==0.7.0
-Werkzeug==3.0.1
+Werkzeug==3.0.3
 wheel==0.38.1
 wrapt==1.12.1
 yapf==0.30.0
