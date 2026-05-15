@@ -33,7 +33,7 @@ joblib==1.2.0
 Keras==2.4.3
 Keras-Preprocessing==1.1.2
 kiwisolver==1.2.0
-Markdown==3.2.2
+Markdown==3.8.1
 matplotlib==3.2.2
 mccabe==0.6.1
 murmurhash==1.0.2
